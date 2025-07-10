@@ -537,9 +537,52 @@ public class LoansApiResource {
     @RequestBody(required = true, content = @Content(schema = @Schema(implementation = LoansApiResourceSwagger.PostLoansRequest.class)))
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "OK", content = @Content(schema = @Schema(implementation = LoansApiResourceSwagger.PostLoansResponse.class))) })
+            /* TO-DO: Entender como funciona para poder modificar */
     public String calculateLoanScheduleOrSubmitLoanApplication(
             @QueryParam("command") @Parameter(description = "command") final String commandParam, @Context final UriInfo uriInfo,
             @Parameter(hidden = true) final String apiRequestBodyAsJson) {
+
+        /// commandParam = calculateLoanSchedule
+
+        /* apiRequestBodyAsJson: 
+            {
+                "productId":1,
+                "loanOfficerId":"",
+                "loanPurposeId":"",
+                "fundId":1,
+                "submittedOnDate":"08 July 2025",
+                "expectedDisbursementDate":"02 August 2025",
+                "linkAccountId":"",
+                "createStandingInstructionAtDisbursement":"",
+                "loanTermFrequency":24,
+                "loanTermFrequencyType":2,
+                "numberOfRepayments":24,
+                "repaymentEvery":1,
+                "repaymentFrequencyType":2,
+                "repaymentFrequencyNthDayType":"",
+                "repaymentFrequencyDayOfWeekType":"",
+                "repaymentsStartingFromDate":"02 September 2025",
+                "interestChargedFromDate":"02 August 2025",
+                "interestType":0,
+                "isEqualAmortization":false,
+                "amortizationType":1,
+                "interestCalculationPeriodType":1,
+                "loanIdToClose":"",
+                "isTopup":"",
+                "transactionProcessingStrategyCode":"creocore-strategy",
+                "interestRateFrequencyType":2,
+                "interestRatePerPeriod":2,
+                "charges":[],
+                "collateral":[],
+                "dateFormat":"dd MMMM yyyy",
+                "locale":"en",
+                "clientId":1,
+                "loanType":"individual",
+                "principal":30000,
+                "allowPartialPeriodInterestCalcualtion":true
+            } */
+        
+        // uriInfo: org.glassfish.jersey.server.internal.routing.UriRoutingContext@267c10b5
 
         if (CommandParameterUtil.is(commandParam, "calculateLoanSchedule")) {
 

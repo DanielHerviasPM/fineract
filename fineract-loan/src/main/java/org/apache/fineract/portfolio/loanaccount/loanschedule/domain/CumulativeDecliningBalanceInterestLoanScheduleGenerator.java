@@ -170,6 +170,8 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
             interestForPeriod = cumulatingInterestDueToGrace.minus(cumulatingInterestPaymentDueToGrace);
         }
 
+        /// Acá se calcula el pago principal para el periodo actual
+        System.out.println("CumulativeDecliningBalanceInterestLoanScheduleGenerator");
         Money principalForThisInstallment = loanApplicationTerms.calculateTotalPrincipalForPeriod(calculator, outstandingBalance,
                 periodNumber, mc, interestForPeriod);
         if (loanApplicationTerms.isInterestToBeRecoveredFirstWhenGreaterThanEMIEnabled() && principalForThisInstallment.isLessThanZero()

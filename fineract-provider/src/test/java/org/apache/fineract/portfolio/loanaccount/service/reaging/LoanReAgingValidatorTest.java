@@ -456,7 +456,7 @@ class LoanReAgingValidatorTest {
     }
 
     private String formatDate(LocalDate date) {
-        return DateTimeFormatter.ofPattern(DATE_FORMAT).format(date);
+        return DateTimeFormatter.ofPattern(DATE_FORMAT, java.util.Locale.ENGLISH).format(date);
     }
 
     private JsonCommand jsonCommand(String externalId, String startDate) {
