@@ -123,6 +123,7 @@ import org.apache.fineract.portfolio.loanaccount.service.LoanArrearsAgingService
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssembler;
 import org.apache.fineract.portfolio.loanaccount.service.LoanAssemblerImpl;
 import org.apache.fineract.portfolio.loanaccount.service.LoanBalanceService;
+import org.apache.fineract.portfolio.loanaccount.service.LoanBuyDownFeeAmortizationEventService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanBuyDownFeeAmortizationProcessingService;
 import org.apache.fineract.portfolio.loanaccount.service.LoanBuyDownFeeAmortizationProcessingServiceImpl;
 import org.apache.fineract.portfolio.loanaccount.service.LoanCalculateRepaymentPastDueService;
@@ -431,7 +432,7 @@ public class LoanAccountConfiguration {
             LoanJournalEntryPoster journalEntryPoster, LoanAdjustmentService loanAdjustmentService,
             LoanAccountingBridgeMapper loanAccountingBridgeMapper, LoanMapper loanMapper,
             LoanTransactionProcessingService loanTransactionProcessingService, final LoanBalanceService loanBalanceService,
-            LoanTransactionService loanTransactionService, BuyDownFeePlatformService buyDownFeePlatformService) {
+            LoanTransactionService loanTransactionService) {
         return new LoanWritePlatformServiceJpaRepositoryImpl(context, loanTransactionValidator, loanUpdateCommandFromApiJsonDeserializer,
                 loanRepositoryWrapper, loanAccountDomainService, noteRepository, loanTransactionRepository,
                 loanTransactionRelationRepository, loanAssembler, journalEntryWritePlatformService, calendarInstanceRepository,
@@ -572,5 +573,13 @@ public class LoanAccountConfiguration {
             final ExternalIdFactory externalIdFactory) {
         return new LoanBuyDownFeeAmortizationProcessingServiceImpl(loanTransactionRepository, loanBuyDownFeeBalanceRepository,
                 businessEventNotifierService, journalEntryPoster, externalIdFactory);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(LoanBuyDownFeeAmortizationEventService.class)
+    public LoanBuyDownFeeAmortizationEventService loanBuyDownFeeAmortizationEventService(
+            BusinessEventNotifierService businessEventNotifierService,
+            LoanBuyDownFeeAmortizationProcessingService loanBuyDownFeeAmortizationProcessingService) {
+        return new LoanBuyDownFeeAmortizationEventService(businessEventNotifierService, loanBuyDownFeeAmortizationProcessingService);
     }
 }
