@@ -134,7 +134,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         if (!scheduleParams.isPartialUpdate() && !loanApplicationTerms.isEqualAmortization()) {
             Money totalInterestChargedForFullLoanTerm = loanApplicationTerms
                     .calculateTotalInterestCharged(getPaymentPeriodsInOneYearCalculator(), mc);
-            System.out.println("totalInterestChargedForFullLoanTerm = " + totalInterestChargedForFullLoanTerm);
+            /// totalInterestChargedForFullLoanTerm = PEN 0.00
             loanApplicationTerms.updateTotalInterestDue(totalInterestChargedForFullLoanTerm);
 
         }
@@ -157,7 +157,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
             // Set Fixed Principal Amount
             updateAmortization(mc, loanApplicationTerms, scheduleParams.getPeriodNumber(), calculatedAmortizableAmount);
             System.out.println("loanApplicationTerms.getFixedEmiAmount() = " + loanApplicationTerms.getFixedEmiAmount());
-            /// updateAmortization -> loanApplicationTerms.getFixedEmiAmount() = 1586.13
+            /// updateAmortization -> loanApplicationTerms.getFixedEmiAmount() = 2836.79
             /// loanApplicationTerms.isDownPaymentEnabled() = false
             /// loanApplicationTerms.isMultiDisburseLoan() = false
             if (loanApplicationTerms.isMultiDisburseLoan()) {
@@ -231,6 +231,52 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         System.out.println("scheduleParams.getOutstandingBalance().isZero() = " + scheduleParams.getOutstandingBalance().isZero());
         System.out.println("scheduleParams.getDisburseDetailMap().isEmpty() = " + scheduleParams.getDisburseDetailMap().isEmpty());
 
+        System.out.println("periods = " + periods.size());
+        System.out.println("periods = " + periods.getFirst().toData().getPrincipalDisbursed());
+
+        // === LÓGICA PARA CUOTA EXTRA DE INTERESES CUANDO > 45 DÍAS ===
+        if (!scheduleParams.isPartialUpdate()) {
+            LocalDate interestChargedFromDate = loanApplicationTerms.getInterestChargedFromDate();
+            
+            // Calcular días entre fecha de cobro de intereses y primer pago
+            int daysBetweenInterestAndFirstPayment = DateUtils.getExactDifferenceInDays(
+                interestChargedFromDate, firstRepaymentDate);
+            
+            System.out.println("daysBetweenInterestAndFirstPayment = " + daysBetweenInterestAndFirstPayment);
+            
+            // Si excede 45 días, crear cuota extra de solo intereses
+            if (daysBetweenInterestAndFirstPayment > 45) {
+                int extraDays = daysBetweenInterestAndFirstPayment - 30;
+                LocalDate extraPaymentDate = firstRepaymentDate.minusDays(30);
+                
+                System.out.println("Creando cuota extra de " + extraDays + " días, fecha de pago: " + extraPaymentDate);
+                
+                // Crear cuota de solo intereses para días extra
+                // Pasar fechas reales para que entre al if (daysInPeriod > 45) en LoanApplicationTerms
+                LoanScheduleModelPeriod extraInterestPeriod = createExtraInterestOnlyPeriod(
+                    loanApplicationTerms, scheduleParams, 
+                    interestChargedFromDate, firstRepaymentDate, mc);
+                
+                periods.add(extraInterestPeriod);
+                scheduleParams.incrementInstalmentNumber();
+                
+                // Agregar intereses de cuota extra a los totales del préstamo
+                Money interestAmount = extraInterestPeriod.interestDue() != null ? 
+                    Money.of(monetaryCurrency, extraInterestPeriod.interestDue()) : Money.zero(monetaryCurrency);
+                scheduleParams.addTotalRepaymentExpected(interestAmount);
+                scheduleParams.addTotalCumulativeInterest(interestAmount);
+
+                System.out.println("Cuota extra de intereses agregada: " + interestAmount);
+                
+                // Ajustar fecha de inicio para el cronograma normal
+                // Para que las cuotas subsecuentes calculen como si fuera un préstamo ideal de 30 días
+                scheduleParams.setPeriodStartDate(extraPaymentDate);
+                scheduleParams.setActualRepaymentDate(extraPaymentDate);
+                
+                System.out.println("Cuota extra agregada. Nuevo período inicial: " + extraPaymentDate);
+            }
+        }
+
         while (!scheduleParams.getOutstandingBalance().isZero() || !scheduleParams.getDisburseDetailMap().isEmpty()) {
             /// Se generan la fecha de desembolso y las fechas restantes de pago menos la ultima.
             LocalDate previousRepaymentDate = scheduleParams.getActualRepaymentDate();
@@ -248,6 +294,8 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                     scheduleParams.getPeriodStartDate(), idealDisbursementDate, firstRepaymentDate,
                     loanApplicationTerms.isInterestChargedFromDateSameAsDisbursalDateEnabled(),
                     loanApplicationTerms.getExpectedDisbursementDate());
+
+            System.out.println("periodStartDateApplicableForInterest2 = " + periodStartDateApplicableForInterest);
 
             // Loan Schedule Exceptions that need to be applied for Loan Account
             LoanTermVariationParams termVariationParams = applyLoanTermVariations(loanApplicationTerms, scheduleParams,
@@ -328,6 +376,8 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
             updateCompoundingDetails(scheduleParams, periodStartDateApplicableForInterest);
 
             // 5 determine principal,interest of repayment period
+            /// TO-DO Aca se calculan los intereses
+            /// Como vimos arriba aca se calculan 12 fechas menos la del ultimo pago
             PrincipalInterest principalInterestForThisPeriod = calculatePrincipalInterestComponentsForPeriod(
                     getPaymentPeriodsInOneYearCalculator(), currentPeriodParams.getInterestCalculationGraceOnRepaymentPeriodFraction(),
                     scheduleParams.getTotalCumulativePrincipal().minus(scheduleParams.getReducePrincipal()),
@@ -349,6 +399,9 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
             Money lastTotalOutstandingInterestPaymentDueToGrace = scheduleParams.getTotalOutstandingInterestPaymentDueToGrace();
             scheduleParams.setTotalOutstandingInterestPaymentDueToGrace(principalInterestForThisPeriod.interestPaymentDueToGrace());
             currentPeriodParams.setPrincipalForThisPeriod(principalInterestForThisPeriod.principal());
+
+            System.out.println("currentPeriodParams.getInterestForThisPeriod() = " + currentPeriodParams.getInterestForThisPeriod());
+            System.out.println("currentPeriodParams.getPrincipalForThisPeriod() = " + currentPeriodParams.getPrincipalForThisPeriod());
 
             // applies early payments on principal portion
             updatePrincipalPortionBasedOnPreviousEarlyPayments(currency, scheduleParams, currentPeriodParams);
@@ -379,6 +432,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
             }
 
             // create repayment period from parts
+            System.out.println("scheduleParams.getOutstandingBalance() = " + scheduleParams.getOutstandingBalance());
             LoanScheduleModelPeriod installment = LoanScheduleModelRepaymentPeriod.repayment(scheduleParams.getInstalmentNumber(),
                     scheduleParams.getPeriodStartDate(), scheduledDueDate, currentPeriodParams.getPrincipalForThisPeriod(),
                     scheduleParams.getOutstandingBalance(), currentPeriodParams.getInterestForThisPeriod(),
@@ -399,7 +453,10 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                 installment.setEMIFixedSpecificToInstallmentTrue();
             }
 
+            System.out.println("installmentt4 = " + installment.periodNumber());
+            System.out.println("installmentt4 = " + installment.toData().getPrincipalDisbursed());
             periods.add(installment);
+            System.out.println("periods.size()4 = " + periods.size());
 
             // Updates principal paid map with efective date for reducing
             // the amount from outstanding balance(interest calculation)
@@ -421,7 +478,10 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                         scheduleParams.getPeriodNumber(), mc);
             }
         }
-
+        System.out.println("scheduleParams.getTotalCumulativePrincipal().getAmount() = "
+                + scheduleParams.getTotalCumulativePrincipal().getAmount());
+        System.out.println("scheduleParams.getTotalCumulativeInterest().getAmount() = "
+                + scheduleParams.getTotalCumulativeInterest().getAmount());
         // this condition is to add the interest from grace period if not
         // already applied.
         System.out.println("scheduleParams.getTotalOutstandingInterestPaymentDueToGrace().isGreaterThanZero() = "
@@ -840,6 +900,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                                     scheduleParams.getOutstandingBalance(), interestForCurrentInstallment, feeChargesForInstallment,
                                     penaltyChargesForInstallment, totalInstallmentDue, true, mc);
                             periods.add(installment);
+                            System.out.println("periods2");
                             addLoanRepaymentScheduleInstallment(scheduleParams.getInstallments(), installment);
                             updateCompoundingMap(loanApplicationTerms, holidayDetailDTO, scheduleParams, lastRestDate, scheduledDueDate);
 
@@ -1976,6 +2037,89 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         return periodStartDateApplicableForInterest;
     }
 
+    /**
+     * Calcula los días de interés para el primer período basado en configuraciones del préstamo.
+     * Utiliza la configuración de días por mes y año del sistema (respeta 30/360, actual/365, etc.).
+     * 
+     * @param loanApplicationTerms Términos del préstamo
+     * @param idealDisbursementDate Fecha ideal de desembolso
+     * @param firstRepaymentDate Primera fecha de pago
+     * @return Número de días para cálculo de interés del primer período
+     */
+    private int calculateInterestDaysForFirstPeriod(final LoanApplicationTerms loanApplicationTerms, 
+            final LocalDate idealDisbursementDate, final LocalDate firstRepaymentDate) {
+        
+        // Obtener fecha desde la cual se cobran intereses (respeta configuración)
+        LocalDate interestStartDate = calculateInterestStartDateForPeriod(
+            loanApplicationTerms,
+            idealDisbursementDate, // periodStartDate
+            idealDisbursementDate,
+            firstRepaymentDate,
+            loanApplicationTerms.isInterestChargedFromDateSameAsDisbursalDateEnabled(),
+            loanApplicationTerms.getExpectedDisbursementDate()
+        );
+        
+        // Calcular días respetando configuración de días/mes y días/año del sistema
+        int daysForInterest = calculateDaysConsideringDayCountConvention(
+            loanApplicationTerms, interestStartDate, firstRepaymentDate);
+        
+        return daysForInterest;
+    }
+
+    /**
+     * Calcula días entre dos fechas respetando la configuración de DaysInMonthType y DaysInYearType.
+     * Si es configuración de 30 días/mes, calcula usando esa convención en lugar de días calendario reales.
+     * 
+     * @param loanApplicationTerms Términos del préstamo con configuraciones
+     * @param startDate Fecha de inicio
+     * @param endDate Fecha final
+     * @return Número de días calculados según la convención configurada
+     */
+    private int calculateDaysConsideringDayCountConvention(final LoanApplicationTerms loanApplicationTerms,
+            final LocalDate startDate, final LocalDate endDate) {
+        
+        // Si usa configuración de 30 días/mes, calcular usando esa convención
+        if (loanApplicationTerms.getDaysInMonthType().isDaysInMonth_30()) {
+            return calculateDaysUsing30DayMonth(startDate, endDate);
+        } else {
+            // Usar días calendario reales
+            return DateUtils.getExactDifferenceInDays(startDate, endDate);
+        }
+    }
+
+    /**
+     * Calcula días usando la convención de 30 días por mes.
+     * Esta implementación sigue la convención 30/360 estándar.
+     * 
+     * @param startDate Fecha de inicio
+     * @param endDate Fecha final
+     * @return Número de días usando convención 30/360
+     */
+    private int calculateDaysUsing30DayMonth(final LocalDate startDate, final LocalDate endDate) {
+        int startYear = startDate.getYear();
+        int startMonth = startDate.getMonthValue();
+        int startDay = startDate.getDayOfMonth();
+        
+        int endYear = endDate.getYear();
+        int endMonth = endDate.getMonthValue();
+        int endDay = endDate.getDayOfMonth();
+        
+        // Aplicar reglas de convención 30/360
+        if (startDay == 31) {
+            startDay = 30;
+        }
+        if (endDay == 31 && startDay == 30) {
+            endDay = 30;
+        }
+        
+        // Calcular días usando fórmula 30/360
+        int totalDays = (endYear - startYear) * 360 
+                       + (endMonth - startMonth) * 30 
+                       + (endDay - startDay);
+        
+        return totalDays;
+    }
+
     private void updateMapWithAmount(final Map<LocalDate, Money> map, final Money amount, final LocalDate amountApplicableDate) {
         Money principalPaid = amount;
         if (map.containsKey(amountApplicableDate)) {
@@ -1983,6 +2127,104 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         }
         map.put(amountApplicableDate, principalPaid);
 
+    }
+
+    /**
+     * Crea un período de cronograma que contiene solo intereses para días excedentes
+     * cuando el período inicial supera los 45 días.
+     * Respeta la configuración del calendario (30/360, actual/365, etc.)
+     */
+    private LoanScheduleModelPeriod createExtraInterestOnlyPeriod(
+        final LoanApplicationTerms loanApplicationTerms,
+        final LoanScheduleParams scheduleParams,
+        final LocalDate periodStartDate,
+        final LocalDate periodEndDate,
+        final MathContext mc) {
+        
+        final MonetaryCurrency currency = MonetaryCurrency.fromCurrencyData(scheduleParams.getCurrency());
+        Money outstandingBalance = scheduleParams.getOutstandingBalance();
+        
+        // Calcular interés para el período completo (fechas reales)
+        // Esto entrará al if (daysInPeriod > 45) en LoanApplicationTerms
+        System.out.println("Calculando interés para el período completo desde " + periodStartDate + " hasta " + periodEndDate);
+        PrincipalInterest principalInterestForFullPeriod = calculatePrincipalInterestComponentsForPeriod(
+            getPaymentPeriodsInOneYearCalculator(),
+            BigDecimal.ZERO, // sin gracia de interés
+            Money.zero(currency), // sin capital acumulativo previo
+            Money.zero(currency), // sin interés acumulativo previo
+            Money.zero(currency), // sin interés total del préstamo 
+            Money.zero(currency), // sin interés de gracia acumulativo
+            outstandingBalance,   // saldo pendiente para cálculo
+            loanApplicationTerms,
+            0, // usar período 0 para cuota extra y evitar lógica del primer período
+            mc,
+            new TreeMap<>(), // sin variaciones de principal
+            new TreeMap<>(), // sin composición
+            periodStartDate,
+            periodEndDate,
+            loanApplicationTerms.getLoanTermVariations().getInterestRateChanges()
+        );
+        
+        Money interestForFullPeriod = principalInterestForFullPeriod.interest();
+        
+        // Calcular interés para 30 días (tasa mensual estándar)
+        LocalDate thirtyDaysEndDate = periodStartDate.plusDays(30);
+        System.out.println("Calculando interés para 30 días desde " + periodStartDate + " hasta " + thirtyDaysEndDate);
+        PrincipalInterest principalInterestFor30Days = calculatePrincipalInterestComponentsForPeriod(
+            getPaymentPeriodsInOneYearCalculator(),
+            BigDecimal.ZERO, // sin gracia de interés
+            Money.zero(currency), // sin capital acumulativo previo
+            Money.zero(currency), // sin interés acumulativo previo
+            Money.zero(currency), // sin interés total del préstamo 
+            Money.zero(currency), // sin interés de gracia acumulativo
+            outstandingBalance,   // saldo pendiente para cálculo
+            loanApplicationTerms,
+            0, // usar período 0
+            mc,
+            new TreeMap<>(), // sin variaciones de principal
+            new TreeMap<>(), // sin composición
+            periodStartDate,
+            thirtyDaysEndDate,
+            loanApplicationTerms.getLoanTermVariations().getInterestRateChanges()
+        );
+        
+        Money interestFor30Days = principalInterestFor30Days.interest();
+        
+        // Interés de la cuota extra = Interés completo - Interés de 30 días
+        Money interestForExtraDays = interestForFullPeriod.minus(interestFor30Days);
+        
+        // Calcular días para logging
+        int daysInFullPeriod = DateUtils.getExactDifferenceInDays(periodStartDate, periodEndDate);
+        int extraDays = daysInFullPeriod - 30;
+        System.out.println("Interés para período completo (" + daysInFullPeriod + " días): " + interestForFullPeriod);
+        System.out.println("Interés para 30 días: " + interestFor30Days);
+        System.out.println("Interés para cuota extra (" + extraDays + " días): " + interestForExtraDays);
+        
+        // Crear período de solo intereses (capital = 0)
+        // Calcular fecha de pago respetando configuración 30/360
+        LocalDate adjustedPaymentDate;
+        if (loanApplicationTerms.getDaysInMonthType().isDaysInMonth_30()) {
+            // Convención 30/360: mismo día del mes, exactamente 1 mes antes
+            adjustedPaymentDate = periodEndDate.withDayOfMonth(periodEndDate.getDayOfMonth()).minusMonths(1);
+            System.out.println("Usando convención 30/360 para fecha de cuota extra: " + adjustedPaymentDate);
+        } else {
+            // Días reales: usar cálculo con días calendario
+            adjustedPaymentDate = periodEndDate.minusDays(30);
+            System.out.println("Usando días calendario reales para fecha de cuota extra: " + adjustedPaymentDate);
+        }
+        
+        return LoanScheduleModelRepaymentPeriod.repayment(
+            scheduleParams.getInstalmentNumber(),
+            periodStartDate,
+            adjustedPaymentDate,
+            Money.zero(currency),           // principal = 0 (no se amortiza capital)
+            outstandingBalance,             // saldo pendiente permanece igual
+            interestForExtraDays,           // solo intereses por días extra
+            Money.zero(currency),           // sin cargos
+            Money.zero(currency),           // sin penalidades  
+            interestForExtraDays,           // total = solo intereses
+            false, // no es down payment
+            mc);
     }
 
     // Abstract methods

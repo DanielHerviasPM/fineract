@@ -149,7 +149,7 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
                 }
             }
         }
-
+        /// Aca se calcula el interés total para el periodo actual
         final PrincipalInterest result = loanApplicationTerms.calculateTotalInterestForPeriod(calculator,
                 interestCalculationGraceOnRepaymentPeriodFraction, periodNumber, mc, cumulatingInterestDueToGrace,
                 balanceForInterestCalculation, interestStartDate, periodEndDate);
@@ -166,12 +166,11 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
         Money interestForPeriod = interestForThisInstallment;
         if (interestForPeriod.isGreaterThanZero()) {
             interestForPeriod = interestForPeriod.minus(cumulatingInterestPaymentDueToGrace);
-        } else {
+            } else {
             interestForPeriod = cumulatingInterestDueToGrace.minus(cumulatingInterestPaymentDueToGrace);
         }
 
-        /// Acá se calcula el pago principal para el periodo actual
-        System.out.println("CumulativeDecliningBalanceInterestLoanScheduleGenerator");
+        /// Acá se calcula el pago capital para el periodo actual
         Money principalForThisInstallment = loanApplicationTerms.calculateTotalPrincipalForPeriod(calculator, outstandingBalance,
                 periodNumber, mc, interestForPeriod);
         if (loanApplicationTerms.isInterestToBeRecoveredFirstWhenGreaterThanEMIEnabled() && principalForThisInstallment.isLessThanZero()
@@ -188,6 +187,17 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
         // adjust if needed
         principalForThisInstallment = loanApplicationTerms.adjustPrincipalIfLastRepaymentPeriod(principalForThisInstallment,
                 totalCumulativePrincipalToDate, periodNumber);
+        if (periodNumber == 1 && loanApplicationTerms.hasAdditionalInterestForFirstPeriod()) {
+            // Calcular días entre fecha de cobro de intereses y primer pago
+            LocalDate interestChargedFromDate = loanApplicationTerms.getInterestChargedFromDate();
+            int daysBetweenInterestAndFirstPayment = DateUtils.getExactDifferenceInDays(
+                interestChargedFromDate, periodEndDate);
+            
+            // Solo aplicar si el período es > 30 días y ≤ 45 días
+            if (daysBetweenInterestAndFirstPayment > 30 && daysBetweenInterestAndFirstPayment <= 45) {
+                interestForThisInstallment = interestForThisInstallment.add(loanApplicationTerms.getAdditionalInterestForFirstPeriod());
+            }
+        }
 
         PrincipalInterest principalInterest = new PrincipalInterest(principalForThisInstallment, interestForThisInstallment,
                 interestBroughtFowardDueToGrace);

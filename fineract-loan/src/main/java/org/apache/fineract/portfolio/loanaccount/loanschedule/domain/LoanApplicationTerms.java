@@ -92,6 +92,14 @@ public final class LoanApplicationTerms {
     private InterestCalculationPeriodMethod interestCalculationPeriodMethod;
     private boolean allowPartialPeriodInterestCalcualtion;
 
+    /**
+     * Additional interest to be added to the first period for non-standard periods.
+     * This allows handling cases where the first payment period is longer than the standard period.
+     * For example, if disbursement is Aug 2 and first payment is Sep 15 (43 days instead of 30),
+     * the extra 13 days of interest can be calculated and added to the first installment.
+     */
+    private Money additionalInterestForFirstPeriod;
+
     private Money principal;
     private LocalDate expectedDisbursementDate;
     private LocalDate repaymentsStartingFromDate;
@@ -292,6 +300,7 @@ public final class LoanApplicationTerms {
         this.buyDownFeeIncomeType = builder.buyDownFeeIncomeType;
         this.interestMethod = builder.interestMethod;
         this.allowPartialPeriodInterestCalcualtion = builder.allowPartialPeriodInterestCalculation;
+        this.additionalInterestForFirstPeriod = builder.additionalInterestForFirstPeriod;
     }
 
     public static class Builder {
@@ -331,6 +340,7 @@ public final class LoanApplicationTerms {
         private LoanBuyDownFeeStrategy buyDownFeeStrategy;
         private LoanBuyDownFeeIncomeType buyDownFeeIncomeType;
         private boolean allowPartialPeriodInterestCalculation;
+        private Money additionalInterestForFirstPeriod;
 
         public Builder interestMethod(InterestMethod interestMethod) {
             this.interestMethod = interestMethod;
@@ -506,6 +516,10 @@ public final class LoanApplicationTerms {
             return this;
         }
 
+        public Builder additionalInterestForFirstPeriod(Money additionalInterestForFirstPeriod) {
+            this.additionalInterestForFirstPeriod = additionalInterestForFirstPeriod;
+            return this;
+        }
     }
 
     public static LoanApplicationTerms assembleFrom(LoanRepaymentScheduleModelData modelData, MathContext mc) {
@@ -901,7 +915,7 @@ public final class LoanApplicationTerms {
             final int periodNumber, final MathContext mc, Money interestForThisInstallment) {
 
         Money principalForInstallment = this.principal.zero();
-
+        /// TO-DO AGREGAR UN NUEVO CASE PARA MANEJAR EL CASO QUE QUEREMOS EN PRESTAMYPE.
         switch (this.interestMethod) {
             case FLAT:
                 principalForInstallment = calculateTotalPrincipalPerPeriodWithoutGrace(mc, periodNumber, interestForThisInstallment);
@@ -1535,18 +1549,27 @@ public final class LoanApplicationTerms {
         return graceOnInterestCharged;
     }
 
+    public Money getAdditionalInterestForFirstPeriod() {
+        return this.additionalInterestForFirstPeriod;
+    }
+
+    public boolean hasAdditionalInterestForFirstPeriod() {
+        return this.additionalInterestForFirstPeriod != null && this.additionalInterestForFirstPeriod.isGreaterThanZero();
+    }
+
+    public void setAdditionalInterestForFirstPeriod(Money additionalInterestForFirstPeriod) {
+        this.additionalInterestForFirstPeriod = additionalInterestForFirstPeriod;
+    }
+
     private double paymentPerPeriod(final BigDecimal periodicInterestRate, final Money balance, final int periodsElapsed) {
 
         if (getFixedEmiAmount() == null) {
             final double futureValue = 0;
             final double principalDouble = balance.getAmount().multiply(BigDecimal.valueOf(-1)).doubleValue();
-
             final Integer periodsRemaining = calculateNumberOfRemainingPrincipalPaymentPeriods(this.actualNumberOfRepayments,
                     periodsElapsed);
-
             double installmentAmount = FinanicalFunctions.pmt(periodicInterestRate.doubleValue(), periodsRemaining.doubleValue(),
                     principalDouble, futureValue, false);
-
             BigDecimal fixedEmiAmount = BigDecimal.valueOf(installmentAmount);
             if (this.installmentAmountInMultiplesOf != null) {
                 fixedEmiAmount = Money.roundToMultiplesOf(fixedEmiAmount, this.installmentAmountInMultiplesOf);
@@ -1561,9 +1584,21 @@ public final class LoanApplicationTerms {
 
         Money interestDue = Money.zero(outstandingBalance.getCurrency());
 
-        final BigDecimal periodicInterestRate = periodicInterestRate(calculator, mc, this.daysInMonthType, this.daysInYearType,
+        BigDecimal periodicInterestRate = periodicInterestRate(calculator, mc, this.daysInMonthType, this.daysInYearType,
                 periodStartDate, periodEndDate);// 0.021232877 ob:14911.64
-        interestDue = outstandingBalance.multiplyRetainScale(periodicInterestRate, mc);
+        if (periodicInterestRate.compareTo(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc)) > 0) {
+            additionalInterestForFirstPeriod = outstandingBalance.multiplyRetainScale(periodicInterestRate.subtract(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc)), mc);
+        }
+        int daysInPeriod = DateUtils.getExactDifferenceInDays(periodStartDate, periodEndDate);
+        
+        // Para períodos > 45 días, usar tasa calculada para días exactos
+        // Para períodos 30-45 días, usar tasa de 30 días (el additionalInterestForFirstPeriod se suma después)
+        if (daysInPeriod > 45) {
+            interestDue = outstandingBalance.multiplyRetainScale(periodicInterestRate, mc);
+        } else {
+            // Para períodos ≤ 45 días, usar tasa mensual estándar
+            interestDue = outstandingBalance.multiplyRetainScale(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc), mc);
+        }
 
         return interestDue;
     }
@@ -1575,7 +1610,7 @@ public final class LoanApplicationTerms {
         Money interest = calculateDecliningInterestDueForInstallmentBeforeApplyingGrace(calculator, mc, outstandingBalance, periodStartDate,
                 periodEndDate);
 
-        if (isInterestPaymentGraceApplicableForThisPeriod(periodNumber)) {
+            if (isInterestPaymentGraceApplicableForThisPeriod(periodNumber)) {
             interest = interest.zero();
         }
 
@@ -1584,14 +1619,12 @@ public final class LoanApplicationTerms {
         if (isInterestFreeGracePeriod(periodNumber)) {
             interest = interest.zero();
         } else if (isInterestFreeGracePeriodFromDate(interestCalculationGraceOnRepaymentPeriodFraction)) {
-
             if (interestCalculationGraceOnRepaymentPeriodFraction.compareTo(BigDecimal.ZERO) > 0) {
                 interest = interest.zero();
                 fraction = fraction.subtract(BigDecimal.ONE);
 
             } else if (interestCalculationGraceOnRepaymentPeriodFraction.compareTo(BigDecimal.valueOf(0.25)) > 0
                     && interestCalculationGraceOnRepaymentPeriodFraction.compareTo(BigDecimal.ONE) < 0) {
-
                 final Money graceOnInterestForRepaymentPeriod = interest.multipliedBy(interestCalculationGraceOnRepaymentPeriodFraction);
                 interest = interest.minus(graceOnInterestForRepaymentPeriod);
                 fraction = BigDecimal.ZERO;
@@ -2014,6 +2047,10 @@ public final class LoanApplicationTerms {
 
     public boolean isSkipRepaymentOnFirstDayofMonth() {
         return isSkipRepaymentOnFirstDayOfMonth;
+    }
+
+    public DaysInMonthType getDaysInMonthType() {
+        return this.daysInMonthType;
     }
 
     public HolidayDetailDTO getHolidayDetailDTO() {
