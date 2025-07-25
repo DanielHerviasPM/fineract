@@ -113,6 +113,15 @@ tasks.withType(JavaCompile).configureEach {
         enabled = false  // Disable ErrorProne for this module since it contains generated code
     }
     options.compilerArgs -= ["-Werror"]
+    
+    // Suppress warnings about obsolete Java 8 options
+    options.compilerArgs += [
+        "-Xlint:-options",
+        "-Xlint:-processing"
+    ]
+    
+    // Ensure annotation processing works correctly
+    options.annotationProcessorPath = configurations.annotationProcessor
 }
 
 configurations {

@@ -18,4 +18,15 @@
  */
 dependencies {
     implementation('org.apache.avro:avro')
+    
+    // Annotation processors for Avro generated code
+    compileOnly 'org.apache.avro:avro'
+    annotationProcessor 'org.apache.avro:avro'
+    
+    // Test dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter-api'
+    testImplementation 'org.junit.jupiter:junit-jupiter-engine'
+    
+    testCompileOnly 'org.apache.avro:avro'
+    testAnnotationProcessor 'org.apache.avro:avro'
 }
