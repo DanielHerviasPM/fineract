@@ -43,7 +43,10 @@ dependencies {
         exclude group: 'org.eclipse.persistence', module: 'jakarta.persistence'
     }
     compileOnly 'org.projectlombok:lombok'
+    // Order is critical: Lombok must run before MapStruct
     annotationProcessor 'org.projectlombok:lombok'
+    annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
+    annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
     annotationProcessor 'org.mapstruct:mapstruct-processor'
     jmh 'org.openjdk.jmh:jmh-core'
     jmh 'org.openjdk.jmh:jmh-generator-annprocess'
@@ -71,4 +74,11 @@ dependencies {
             'org.springframework.restdocs:spring-restdocs-webtestclient',
             'org.springframework.restdocs:spring-restdocs-restassured',
             )
+    
+    testCompileOnly 'org.projectlombok:lombok'
+    // Order is critical: Lombok must run before MapStruct
+    testAnnotationProcessor 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'  
+    testAnnotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    testAnnotationProcessor 'org.mapstruct:mapstruct-processor'
 }

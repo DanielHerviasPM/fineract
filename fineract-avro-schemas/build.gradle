@@ -117,11 +117,9 @@ tasks.withType(JavaCompile).configureEach {
     // Suppress warnings about obsolete Java 8 options
     options.compilerArgs += [
         "-Xlint:-options",
-        "-Xlint:-processing"
+        "-Xlint:-processing",
+        "-proc:none"  // Disable annotation processing for generated Avro code
     ]
-    
-    // Ensure annotation processing works correctly
-    options.annotationProcessorPath = configurations.annotationProcessor
 }
 
 configurations {

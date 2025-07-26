@@ -193,10 +193,11 @@ dependencies {
             )
 
     compileOnly 'org.projectlombok:lombok'
+    // Order is critical: Lombok must run before MapStruct
     annotationProcessor 'org.projectlombok:lombok'
-    annotationProcessor 'org.mapstruct:mapstruct-processor'
     annotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
     annotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    annotationProcessor 'org.mapstruct:mapstruct-processor'
 
     implementation 'ch.qos.logback.contrib:logback-json-classic'
     implementation 'ch.qos.logback.contrib:logback-jackson'
@@ -226,8 +227,9 @@ dependencies {
     testImplementation ('org.mockito:mockito-inline')
     
     testCompileOnly 'org.projectlombok:lombok'
+    // Order is critical: Lombok must run before MapStruct
     testAnnotationProcessor 'org.projectlombok:lombok'
-    testAnnotationProcessor 'org.mapstruct:mapstruct-processor'
     testAnnotationProcessor 'org.springframework.boot:spring-boot-autoconfigure-processor'
     testAnnotationProcessor 'org.springframework.boot:spring-boot-configuration-processor'
+    testAnnotationProcessor 'org.mapstruct:mapstruct-processor'
 }
