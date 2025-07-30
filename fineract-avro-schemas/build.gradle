@@ -120,6 +120,9 @@ tasks.withType(JavaCompile).configureEach {
         "-Xlint:-processing",
         "-proc:none"  // Disable annotation processing for generated Avro code
     ]
+    
+    // Ensure annotation processing works correctly when needed
+    options.annotationProcessorPath = configurations.annotationProcessor
 }
 
 configurations {
