@@ -14,9 +14,10 @@ phases:
 
   build:
     commands:
-      - echo Build started on `date`
-      - echo Building the Docker image...
-      - ./gradlew :fineract-provider:clean :fineract-provider:jibDockerBuild --no-daemon -x test -x cucumber
+      - >-
+        ./gradlew --no-daemon :fineract-provider:jibDockerBuild -x test -x cucumber
+        -Djib.to.image=$IMAGE_URI_COMMIT
+        -Djib.to.tags=$IMAGE_URI_LATEST
       - docker push $IMAGE_URI_COMMIT
       - printf '[{"name":"fineract","imageUri":"%s"}]' $IMAGE_URI_COMMIT > imagedefinitions.json
 
