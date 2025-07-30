@@ -8,16 +8,15 @@ phases:
     commands:
       - aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $REPOSITORY_URI
       # Definir tags de la imagen
-      - IMAGE_TAG=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
-      - IMAGE_URI_COMMIT="$REPOSITORY_URI:$IMAGE_TAG"
-      - IMAGE_URI_LATEST="$REPOSITORY_URI:latest"
+      - IMAGE_TAG_COMMIT=$(echo $CODEBUILD_RESOLVED_SOURCE_VERSION | cut -c 1-7)
+      - IMAGE_URI_COMMIT="$REPOSITORY_URI:$IMAGE_TAG_COMMIT"
 
   build:
     commands:
       - >-
         ./gradlew --no-daemon :fineract-provider:jibDockerBuild -x test -x cucumber
-        -Djib.to.image=$IMAGE_URI_COMMIT
-        -Djib.to.tags=$IMAGE_URI_LATEST
+        -Djib.to.image=$REPOSITORY_URI
+        -Djib.to.tags=latest,$IMAGE_TAG_COMMIT
       - docker push $IMAGE_URI_COMMIT
       - printf '[{"name":"fineract","imageUri":"%s"}]' $IMAGE_URI_COMMIT > imagedefinitions.json
 
