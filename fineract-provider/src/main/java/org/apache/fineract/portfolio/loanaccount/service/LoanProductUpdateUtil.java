@@ -364,6 +364,15 @@ public class LoanProductUpdateUtil {
                                     .getAsJsonObject(LoanProductConstants.allowAttributeOverridesParamName)
                                     .getAsJsonPrimitive(LoanProductConstants.GRACE_ON_ARREARS_AGEING_PARAMETER_NAME).getAsBoolean());
                 }
+
+                if (command.parsedJson().getAsJsonObject().getAsJsonObject(LoanProductConstants.allowAttributeOverridesParamName)
+                        .getAsJsonPrimitive(LoanProductConstants.balloonRepaymentAmountParamName)
+                        .getAsBoolean() != loanProduct.getLoanConfigurableAttributes().getBalloonRepaymentAmountBoolean()) {
+                    loanProduct.getLoanConfigurableAttributes()
+                            .setBalloonRepaymentAmount(command.parsedJson().getAsJsonObject()
+                                    .getAsJsonObject(LoanProductConstants.allowAttributeOverridesParamName)
+                                    .getAsJsonPrimitive(LoanProductConstants.balloonRepaymentAmountParamName).getAsBoolean());
+                }
             } else {
                 loanProduct.setLoanConfigurableAttributes(LoanProductConfigurableAttributes.populateDefaultsForConfigurableAttributes());
                 loanProduct.getLoanConfigurableAttributes().updateLoanProduct(loanProduct);

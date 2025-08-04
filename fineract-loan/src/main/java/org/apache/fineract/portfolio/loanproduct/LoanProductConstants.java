@@ -122,6 +122,7 @@ public interface LoanProductConstants {
     String inArrearsToleranceParamName = "inArrearsTolerance";
     String repaymentEveryParamName = "repaymentEvery";
     String graceOnPrincipalAndInterestPaymentParamName = "graceOnPrincipalAndInterestPayment";
+    String balloonRepaymentAmountParamName = "balloonRepaymentAmount";
     String allowCompoundingOnEodParamName = "allowCompoundingOnEod";
 
     // Variable Installments Settings

@@ -95,6 +95,7 @@ public interface LoanApiConstants {
     String daysInYearTypeParameterName = "daysInYearType";
     String daysInYearCustomStrategyParameterName = "daysInYearCustomStrategy";
     String daysInMonthTypeParameterName = "daysInMonthType";
+    String balloonRepaymentAmountParameterName = "balloonRepaymentAmount";
 
     String MULTIDISBURSE_DETAILS_PARAMNAME = "multiDisburseDetails";
     String EMI_AMOUNT_VARIATIONS_PARAMNAME = "emiAmountVariations";

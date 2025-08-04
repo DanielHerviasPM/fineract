@@ -345,6 +345,8 @@ public final class LoanProductsApiResourceSwagger {
             public boolean graceOnPrincipalAndInterestPayment;
             @Schema(example = "true")
             public boolean graceOnArrearsAgeing;
+            @Schema(example = "true")
+            public boolean balloonRepaymentAmount;
         }
 
         static final class RateData {

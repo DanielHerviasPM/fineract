@@ -207,7 +207,7 @@ public final class LoanProductDataValidator {
             LoanProductConstants.interestTypeParamName, LoanProductConstants.transactionProcessingStrategyCodeParamName,
             LoanProductConstants.interestCalculationPeriodTypeParamName, LoanProductConstants.inArrearsToleranceParamName,
             LoanProductConstants.repaymentEveryParamName, LoanProductConstants.graceOnPrincipalAndInterestPaymentParamName,
-            LoanProductConstants.GRACE_ON_ARREARS_AGEING_PARAMETER_NAME };
+            LoanProductConstants.GRACE_ON_ARREARS_AGEING_PARAMETER_NAME, LoanProductConstants.balloonRepaymentAmountParamName };
     public static final String LOANPRODUCT = "loanproduct";
     public static final String OVER_APPLIED_CALCULATION_TYPE = "overAppliedCalculationType";
     public static final String OPENING_SQUARE_BRACKET = "[";
