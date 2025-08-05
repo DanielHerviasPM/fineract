@@ -50,7 +50,7 @@ public class BusinessDateHelper {
     }
 
     public void setBusinessDateToday() throws IOException {
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(DATE_FORMAT, java.util.Locale.ENGLISH);
         String today = formatter.format(Utils.now());
         setBusinessDate(today);
     }

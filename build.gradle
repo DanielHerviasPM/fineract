@@ -148,7 +148,7 @@ gitVersioning.apply {
 }
 
 ext['groovy.version'] = '4.0.17'
-ext['swaggerFile'] = "$rootDir/fineract-provider/build/classes/java/main/static/fineract.json".toString()
+ext['swaggerFile'] = new File("$rootDir/fineract-provider/build/classes/java/main/static/fineract.json").getAbsolutePath()
 
 // Apply static weaving configuration to all subprojects
 subprojects { subproject ->
@@ -344,7 +344,9 @@ allprojects  {
             '**/META-INF/fineract-test.config',
             // Apache-specific GitHub metadata settings file
             '/.asf.yaml',
-            '**/*.sh'
+            '**/*.sh',
+            // prestamype buildspec
+            'buildspec.yaml'
         ]
     }
 }
