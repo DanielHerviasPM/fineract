@@ -26,7 +26,6 @@ buildscript {
         fineractCustomProjects = []
         fineractJavaProjects = subprojects.findAll{
             [
-                'fineract-api',
                 'fineract-core',
                 'fineract-cob',
                 'fineract-validation',
@@ -56,7 +55,6 @@ buildscript {
         fineractPublishProjects = subprojects.findAll{
             [
                 'fineract-avro-schemas',
-                'fineract-api',
                 'fineract-client',
                 'fineract-core',
                 'fineract-cob',
@@ -152,7 +150,7 @@ gitVersioning.apply {
 }
 
 ext['groovy.version'] = '4.0.17'
-ext['swaggerFile'] = "$rootDir/fineract-provider/build/classes/java/main/static/fineract.json".toString()
+ext['swaggerFile'] = "$rootDir/fineract-provider/build/resources/main/static/fineract.json".toString()
 
 // Apply static weaving configuration to all subprojects
 subprojects { subproject ->
