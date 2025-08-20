@@ -115,24 +115,20 @@ public class SynchronousCommandProcessingService implements CommandProcessingSer
                 commandSource = commandSourceService.getCommandSource(commandId);
                 idempotencyKey = commandSource.getIdempotencyKey();
             } else {
-                System.out.println("executeCommand:1.3 ->");
                 idempotencyKey = idempotencyKeyResolver.resolve(wrapper);
             }
             exceptionWhenTheRequestAlreadyProcessed(wrapper, idempotencyKey, isRetry);
 
             AppUser user = context.authenticatedUser(wrapper);
             if (commandSource == null) {
-                System.out.println("executeCommand:2 ->");
                 if (isEnclosingTransaction) {
                     commandSource = commandSourceService.getInitialCommandSource(wrapper, command, user, idempotencyKey);
                 } else {
-                    System.out.println("executeCommand:2.2 ->");
                     commandSource = commandSourceService.saveInitialNewTransaction(wrapper, command, user, idempotencyKey);
                     commandId = commandSource.getId();
                 }
             }
             if (commandId != null) {
-                System.out.println("executeCommand:3 ->");
                 storeCommandIdInContext(commandSource); // Store command id as a request attribute
             }
 

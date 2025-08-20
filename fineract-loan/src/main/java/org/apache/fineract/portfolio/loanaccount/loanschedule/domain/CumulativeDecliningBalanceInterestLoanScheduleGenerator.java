@@ -166,7 +166,7 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
         Money interestForPeriod = interestForThisInstallment;
         if (interestForPeriod.isGreaterThanZero()) {
             interestForPeriod = interestForPeriod.minus(cumulatingInterestPaymentDueToGrace);
-            } else {
+        } else {
             interestForPeriod = cumulatingInterestDueToGrace.minus(cumulatingInterestPaymentDueToGrace);
         }
 
@@ -187,17 +187,6 @@ public class CumulativeDecliningBalanceInterestLoanScheduleGenerator extends Abs
         // adjust if needed
         principalForThisInstallment = loanApplicationTerms.adjustPrincipalIfLastRepaymentPeriod(principalForThisInstallment,
                 totalCumulativePrincipalToDate, periodNumber);
-        if (periodNumber == 1 && loanApplicationTerms.hasAdditionalInterestForFirstPeriod()) {
-            // Calcular días entre fecha de cobro de intereses y primer pago
-            LocalDate interestChargedFromDate = loanApplicationTerms.getInterestChargedFromDate();
-            int daysBetweenInterestAndFirstPayment = DateUtils.getExactDifferenceInDays(
-                interestChargedFromDate, periodEndDate);
-            
-            // Solo aplicar si el período es > 30 días y ≤ 45 días
-            if (daysBetweenInterestAndFirstPayment > 30 && daysBetweenInterestAndFirstPayment <= 45) {
-                interestForThisInstallment = interestForThisInstallment.add(loanApplicationTerms.getAdditionalInterestForFirstPeriod());
-            }
-        }
 
         PrincipalInterest principalInterest = new PrincipalInterest(principalForThisInstallment, interestForThisInstallment,
                 interestBroughtFowardDueToGrace);

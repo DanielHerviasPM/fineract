@@ -1172,8 +1172,9 @@ public final class LoanApplicationTerms {
                             this.holidayDetailDTO.getWorkingDays(), isSkipRepaymentOnFirstDayOfMonth, numberOfDays);
                 }
                 int daysLeftAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths, endDate) + diffDays;
-                int daysInPeriodAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths,
-                        endDateAfterConsideringMonths);
+                /* int daysInPeriodAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths,
+                        endDateAfterConsideringMonths); */
+                int daysInPeriodAfterMonths = calculateDaysInPeriod(startDateAfterConsideringMonths, endDateAfterConsideringMonths);
                 numberOfPeriods = numberOfPeriods.add(BigDecimal.valueOf(numberOfMonths))
                         .add(BigDecimal.valueOf((double) daysLeftAfterMonths / daysInPeriodAfterMonths));
             break;
@@ -1182,8 +1183,9 @@ public final class LoanApplicationTerms {
                 LocalDate startDateAfterConsideringYears = startDate.plusYears(numberOfYears);
                 LocalDate endDateAfterConsideringYears = startDate.plusYears(numberOfYears + 1);
                 int daysLeftAfterYears = DateUtils.getExactDifferenceInDays(startDateAfterConsideringYears, endDate);
-                int daysInPeriodAfterYears = DateUtils.getExactDifferenceInDays(startDateAfterConsideringYears,
-                        endDateAfterConsideringYears);
+                /* int daysInPeriodAfterYears = DateUtils.getExactDifferenceInDays(startDateAfterConsideringYears,
+                        endDateAfterConsideringYears); */
+                int daysInPeriodAfterYears = calculateDaysInPeriod(startDateAfterConsideringYears, endDateAfterConsideringYears);
                 numberOfPeriods = numberOfPeriods.add(BigDecimal.valueOf(numberOfYears))
                         .add(BigDecimal.valueOf((double) daysLeftAfterYears / daysInPeriodAfterYears));
             break;
@@ -1578,7 +1580,7 @@ public final class LoanApplicationTerms {
         }
         return getFixedEmiAmount().doubleValue();
     }
-
+    /// importante para calcular los intereses
     private Money calculateDecliningInterestDueForInstallmentBeforeApplyingGrace(final PaymentPeriodsInOneYearCalculator calculator,
             final MathContext mc, final Money outstandingBalance, LocalDate periodStartDate, LocalDate periodEndDate) {
 
@@ -1589,16 +1591,7 @@ public final class LoanApplicationTerms {
         if (periodicInterestRate.compareTo(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc)) > 0) {
             additionalInterestForFirstPeriod = outstandingBalance.multiplyRetainScale(periodicInterestRate.subtract(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc)), mc);
         }
-        int daysInPeriod = DateUtils.getExactDifferenceInDays(periodStartDate, periodEndDate);
-        
-        // Para períodos > 45 días, usar tasa calculada para días exactos
-        // Para períodos 30-45 días, usar tasa de 30 días (el additionalInterestForFirstPeriod se suma después)
-        if (daysInPeriod > 45) {
-            interestDue = outstandingBalance.multiplyRetainScale(periodicInterestRate, mc);
-        } else {
-            // Para períodos ≤ 45 días, usar tasa mensual estándar
-            interestDue = outstandingBalance.multiplyRetainScale(interestRatePerPeriod.divide(BigDecimal.valueOf(100), mc), mc);
-        }
+        interestDue = outstandingBalance.multiplyRetainScale(periodicInterestRate, mc);
 
         return interestDue;
     }
@@ -1610,7 +1603,7 @@ public final class LoanApplicationTerms {
         Money interest = calculateDecliningInterestDueForInstallmentBeforeApplyingGrace(calculator, mc, outstandingBalance, periodStartDate,
                 periodEndDate);
 
-            if (isInterestPaymentGraceApplicableForThisPeriod(periodNumber)) {
+        if (isInterestPaymentGraceApplicableForThisPeriod(periodNumber)) {
             interest = interest.zero();
         }
 
@@ -1682,6 +1675,11 @@ public final class LoanApplicationTerms {
     private Money calculatePrincipalDueForInstallment(final int periodNumber, final Money totalDuePerInstallment,
             final Money periodInterest) {
         Money principal = totalDuePerInstallment.minus(periodInterest);
+
+        if (additionalInterestForFirstPeriod != null) {
+            principal = principal.plus(additionalInterestForFirstPeriod);
+            setAdditionalInterestForFirstPeriod(additionalInterestForFirstPeriod.zero());
+        }
         if (isPrincipalGraceApplicableForThisPeriod(periodNumber)) {
             principal = principal.zero();
         }
@@ -2280,4 +2278,19 @@ public final class LoanApplicationTerms {
         this.variationDays += daysToAdd;
     }
 
+    /**
+     * Calculates the number of days in a period respecting the configured days in month type.
+     * When configured to use 30 days per month, returns 30 regardless of actual calendar days.
+     * Otherwise, calculates actual days between the given dates.
+     * 
+     * @param startDate the start date of the period
+     * @param endDate the end date of the period
+     * @return the number of days in the period according to configuration
+     */
+    private int calculateDaysInPeriod(final LocalDate startDate, final LocalDate endDate) {
+        if (this.daysInMonthType.isDaysInMonth_30()) {
+            return 30;
+        }
+        return DateUtils.getExactDifferenceInDays(startDate, endDate);
+    }
 }
