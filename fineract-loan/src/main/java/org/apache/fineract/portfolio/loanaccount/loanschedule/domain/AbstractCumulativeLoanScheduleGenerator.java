@@ -140,17 +140,15 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         LocalDate lastRepaymentDate = RepaymentStartDateType.DISBURSEMENT_DATE.equals(loanApplicationTerms.getRepaymentStartDateType())
                 ? loanApplicationTerms.getExpectedDisbursementDate()
                 : loanApplicationTerms.getSubmittedOnDate();
-        /// lastRepaymentDate = 2025-08-02
         LocalDate firstRepaymentDate = getScheduledDateGenerator().generateNextRepaymentDate(lastRepaymentDate, loanApplicationTerms,
                 isFirstRepayment);
-        /// firstRepaymentDate = 2025-09-02
+
         final LocalDate idealDisbursementDate = getScheduledDateGenerator().idealDisbursementDateBasedOnFirstRepaymentDate(
                 loanApplicationTerms.getLoanTermPeriodFrequencyType(), loanApplicationTerms.getRepaymentEvery(), firstRepaymentDate,
                 loanApplicationTerms.getLoanCalendar(), loanApplicationTerms.getHolidayDetailDTO(), loanApplicationTerms);
-        /// idealDisbursementDate = 2025-08-02
+
         if (!scheduleParams.isPartialUpdate()) {
             Money calculatedAmortizableAmount = loanApplicationTerms.getPrincipal().minus(loanApplicationTerms.getDownPaymentAmount());
-            /// calculatedAmortizableAmount = PEN 30000.00
             // Set Fixed Principal Amount
             updateAmortization(mc, loanApplicationTerms, scheduleParams.getPeriodNumber(), calculatedAmortizableAmount);
 
@@ -185,13 +183,10 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         // charges which depends on total loan interest will be added to this
         // set and handled separately after all installments generated
         final Set<LoanCharge> nonCompoundingCharges = separateTotalCompoundingPercentageCharges(loanCharges);
-        /// nonCompoundingCharges = []
         LocalDate currentDate = DateUtils.getBusinessLocalDate();
         LocalDate lastRestDate = currentDate;
-        System.out.println("loanApplicationTerms.getRestCalendarInstance() = " + loanApplicationTerms.getRestCalendarInstance());
         if (loanApplicationTerms.getRestCalendarInstance() != null) {
             lastRestDate = getNextRestScheduleDate(currentDate.minusDays(1), loanApplicationTerms, holidayDetailDTO);
-            System.out.println("lastRestDate = " + lastRestDate);
         }
 
         boolean isNextRepaymentAvailable = true;
@@ -205,10 +200,8 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         }
 
         final Collection<LoanTermVariationsData> interestRates = loanApplicationTerms.getLoanTermVariations().getInterestRateChanges();
-        /// interestRates = []
         final Collection<LoanTermVariationsData> interestRatesForInstallments = loanApplicationTerms.getLoanTermVariations()
                 .getInterestRateFromInstallment();
-        /// interestRatesForInstallments = []
         // this block is to start the schedule generation from specified date
         if (scheduleParams.isPartialUpdate()) {
             if (loanApplicationTerms.isMultiDisburseLoan()) {
@@ -223,12 +216,12 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         }
 
         // === LÓGICA PARA CUOTA EXTRA DE INTERESES CUANDO > 45 DÍAS ===
-        /* if (!scheduleParams.isPartialUpdate()) {
+        if (!scheduleParams.isPartialUpdate()) {
             LocalDate interestChargedFromDate = loanApplicationTerms.getInterestChargedFromDate();
             
             // Calcular días entre fecha de cobro de intereses y primer pago
             BigDecimal daysBetweenInterestAndFirstPayment = loanApplicationTerms.calculatePeriodsBetweenDates(interestChargedFromDate, firstRepaymentDate);
-            System.out.println("daysBetweenInterestAndFirstPayment = " + daysBetweenInterestAndFirstPayment);
+
             // Si excede 45 días, crear cuota extra de solo intereses
             if (daysBetweenInterestAndFirstPayment.compareTo(new BigDecimal(1.5)) > 0) {
                 // Calcular fecha de pago de cuota extra respetando configuración de días
@@ -236,11 +229,9 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                 if (loanApplicationTerms.getDaysInMonthType().isDaysInMonth_30()) {
                     // Convención 30/360: usar exactamente 1 mes antes
                     extraPaymentDate = firstRepaymentDate.minusMonths(1);
-                    System.out.println("Usando convención 30/360 - Fecha de cuota extra: " + extraPaymentDate);
                 } else {
                     // Días reales: usar 30 días calendario antes
                     extraPaymentDate = firstRepaymentDate.minusDays(30);
-                    System.out.println("Usando días reales - Fecha de cuota extra: " + extraPaymentDate);
                 }
                 
                 // Crear cuota de solo intereses para días extra
@@ -250,6 +241,8 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                 
                 periods.add(extraInterestPeriod);
                 scheduleParams.incrementInstalmentNumber();
+                scheduleParams.incrementPeriodNumber();
+                loanApplicationTerms.incrementActualNoOfRepaymnets();
                 
                 // Agregar intereses de cuota extra a los totales del préstamo
                 Money interestAmount = extraInterestPeriod.interestDue() != null ? 
@@ -262,12 +255,11 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                 scheduleParams.setPeriodStartDate(extraPaymentDate);
                 scheduleParams.setActualRepaymentDate(extraPaymentDate);
             }
-        } */
+        }
 
         while (!scheduleParams.getOutstandingBalance().isZero() || !scheduleParams.getDisburseDetailMap().isEmpty()) {
             /// Se generan la fecha de desembolso y las fechas restantes de pago menos la ultima.
             LocalDate previousRepaymentDate = scheduleParams.getActualRepaymentDate();
-            System.out.println("previousRepaymentDate = " + previousRepaymentDate);
             scheduleParams.setActualRepaymentDate(getScheduledDateGenerator()
                     .generateNextRepaymentDate(scheduleParams.getActualRepaymentDate(), loanApplicationTerms, isFirstRepayment));
             AdjustedDateDetailsDTO adjustedDateDetailsDTO = getScheduledDateGenerator()
@@ -434,10 +426,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                 installment.setEMIFixedSpecificToInstallmentTrue();
             }
 
-            System.out.println("installmentt4 = " + installment.periodNumber()); /// borrar
-            System.out.println("installmentt4 = " + installment.toData().getPrincipalDisbursed()); /// borrar
             periods.add(installment);
-            System.out.println("periods.size()4 = " + periods.size()); /// borrar
 
             // Updates principal paid map with efective date for reducing
             // the amount from outstanding balance(interest calculation)
@@ -487,7 +476,6 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         }
 
         loanApplicationTerms.resetFixedEmiAmount();
-        System.out.println("loanApplicationTerms.getFixedEmiAmount() = " + loanApplicationTerms.getFixedEmiAmount());
         final BigDecimal totalPrincipalPaid = BigDecimal.ZERO;
         final BigDecimal totalOutstanding = BigDecimal.ZERO;
 
@@ -867,7 +855,7 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
                                     scheduleParams.getOutstandingBalance(), interestForCurrentInstallment, feeChargesForInstallment,
                                     penaltyChargesForInstallment, totalInstallmentDue, true, mc);
                             periods.add(installment);
-                            System.out.println("periods2");
+
                             addLoanRepaymentScheduleInstallment(scheduleParams.getInstallments(), installment);
                             updateCompoundingMap(loanApplicationTerms, holidayDetailDTO, scheduleParams, lastRestDate, scheduledDueDate);
 
@@ -2149,11 +2137,9 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         if (loanApplicationTerms.getDaysInMonthType().isDaysInMonth_30()) {
             // Convención 30/360: usar exactamente 1 mes
             thirtyDaysEndDate = periodStartDate.plusMonths(1);
-            System.out.println("Usando convención 30/360 - Calculando interés para 1 mes desde " + periodStartDate + " hasta " + thirtyDaysEndDate);
         } else {
             // Días reales: usar 30 días calendario
             thirtyDaysEndDate = periodStartDate.plusDays(30);
-            System.out.println("Usando días reales - Calculando interés para 30 días desde " + periodStartDate + " hasta " + thirtyDaysEndDate);
         }
         
         PrincipalInterest principalInterestFor30Days = calculatePrincipalInterestComponentsForPeriod(
@@ -2179,24 +2165,15 @@ public abstract class AbstractCumulativeLoanScheduleGenerator implements LoanSch
         // Interés de la cuota extra = Interés completo - Interés de 30 días
         Money interestForExtraDays = interestForFullPeriod.minus(interestFor30Days);
         
-        // Calcular días para logging
-        int daysInFullPeriod = DateUtils.getExactDifferenceInDays(periodStartDate, periodEndDate);
-        int extraDays = daysInFullPeriod - 30;
-        System.out.println("Interés para período completo (" + daysInFullPeriod + " días): " + interestForFullPeriod);
-        System.out.println("Interés para 30 días: " + interestFor30Days);
-        System.out.println("Interés para cuota extra (" + extraDays + " días): " + interestForExtraDays);
-        
         // Crear período de solo intereses (capital = 0)
         // Calcular fecha de pago respetando configuración 30/360
         LocalDate adjustedPaymentDate;
         if (loanApplicationTerms.getDaysInMonthType().isDaysInMonth_30()) {
             // Convención 30/360: mismo día del mes, exactamente 1 mes antes
             adjustedPaymentDate = periodEndDate.withDayOfMonth(periodEndDate.getDayOfMonth()).minusMonths(1);
-            System.out.println("Usando convención 30/360 para fecha de cuota extra: " + adjustedPaymentDate);
         } else {
             // Días reales: usar cálculo con días calendario
             adjustedPaymentDate = periodEndDate.minusDays(30);
-            System.out.println("Usando días calendario reales para fecha de cuota extra: " + adjustedPaymentDate);
         }
         
         return LoanScheduleModelRepaymentPeriod.repayment(
