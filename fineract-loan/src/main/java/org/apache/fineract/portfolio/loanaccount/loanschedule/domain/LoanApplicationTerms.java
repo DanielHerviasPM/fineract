@@ -1171,9 +1171,10 @@ public final class LoanApplicationTerms {
                             CalendarUtils.getMeetingFrequencyFromPeriodFrequencyType(getLoanTermPeriodFrequencyType()),
                             this.holidayDetailDTO.getWorkingDays(), isSkipRepaymentOnFirstDayOfMonth, numberOfDays);
                 }
-                int daysLeftAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths, endDate) + diffDays;
-                /* int daysInPeriodAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths,
+                /*int daysLeftAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths, endDate) + diffDays;
+                int daysInPeriodAfterMonths = DateUtils.getExactDifferenceInDays(startDateAfterConsideringMonths,
                         endDateAfterConsideringMonths); */
+                int daysLeftAfterMonths = calculateDaysInPeriod(startDateAfterConsideringMonths, endDate) + diffDays;
                 int daysInPeriodAfterMonths = calculateDaysInPeriod(startDateAfterConsideringMonths, endDateAfterConsideringMonths);
                 numberOfPeriods = numberOfPeriods.add(BigDecimal.valueOf(numberOfMonths))
                         .add(BigDecimal.valueOf((double) daysLeftAfterMonths / daysInPeriodAfterMonths));
@@ -2122,6 +2123,10 @@ public final class LoanApplicationTerms {
         return this.actualNumberOfRepayments;
     }
 
+    public void incrementActualNoOfRepaymnets() {
+        this.actualNumberOfRepayments++;
+    }
+
     public Money getTotalInterestDue() {
         return this.totalInterestDue;
     }
@@ -2288,9 +2293,44 @@ public final class LoanApplicationTerms {
      * @return the number of days in the period according to configuration
      */
     private int calculateDaysInPeriod(final LocalDate startDate, final LocalDate endDate) {
-        if (this.daysInMonthType.isDaysInMonth_30()) {
+        if (this.daysInMonthType.isDaysInMonth_30() && this.daysInYearType.getValue() == 360) {
+            return calculateDaysUsing30_360Convention(startDate, endDate);
+        } else if (this.daysInMonthType.isDaysInMonth_30()) {
             return 30;
         }
         return DateUtils.getExactDifferenceInDays(startDate, endDate);
+    }
+
+    private int calculateDaysUsing30_360Convention(final LocalDate startDate, final LocalDate endDate) {
+        if (startDate.isAfter(endDate)) {
+            return 0;
+        }
+
+        int startYear = startDate.getYear();
+        int startMonth = startDate.getMonthValue();
+        int startDay = Math.min(startDate.getDayOfMonth(), 30);
+
+        int endYear = endDate.getYear();
+        int endMonth = endDate.getMonthValue();
+        int endDay = Math.min(endDate.getDayOfMonth(), 30);
+
+        int totalDays = 0;
+        
+        if (startYear == endYear && startMonth == endMonth) {
+            totalDays = endDay - startDay;
+        } else {
+            totalDays += (30 - startDay);
+            
+            LocalDate currentMonth = LocalDate.of(startYear, startMonth, 1).plusMonths(1);
+            
+            while (currentMonth.isBefore(LocalDate.of(endYear, endMonth, 1))) {
+                totalDays += 30;
+                currentMonth = currentMonth.plusMonths(1);
+            }
+            
+            totalDays += endDay;
+        }
+
+        return Math.max(0, totalDays);
     }
 }
