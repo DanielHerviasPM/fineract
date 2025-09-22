@@ -739,6 +739,9 @@ public class LoanScheduleAssembler {
 
         LoanScheduleGenerator loanScheduleGenerator = this.loanScheduleFactory.create(loanApplicationTerms.getLoanScheduleType(),
                 loanApplicationTerms.getInterestMethod());
+        ///  loanApplicationTerms.getLoanScheduleType() =  CUMULATIVE
+        ///  loanApplicationTerms.isEqualAmortization() = false
+        ///  loanApplicationTerms.getInterestMethod() = DECLINING_BALANCE
         if (loanApplicationTerms.isEqualAmortization()) {
             if (loanApplicationTerms.getInterestMethod().isDecliningBalance()) {
                 final LoanScheduleGenerator decliningLoanScheduleGenerator = this.loanScheduleFactory

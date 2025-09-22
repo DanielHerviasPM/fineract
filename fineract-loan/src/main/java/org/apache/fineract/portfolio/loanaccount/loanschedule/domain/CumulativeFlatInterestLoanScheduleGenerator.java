@@ -67,7 +67,7 @@ public class CumulativeFlatInterestLoanScheduleGenerator extends AbstractCumulat
                 interestCalculationGraceOnRepaymentPeriodFraction, periodNumber, mc, cumulatingInterestPaymentDueToGrace,
                 outstandingBalance, periodStartDate, periodEndDate);
         Money interestForThisInstallment = result.interest();
-
+        System.out.println("CumulativeFlatInterestLoanScheduleGenerator");
         Money principalForThisInstallment = loanApplicationTerms.calculateTotalPrincipalForPeriod(calculator, outstandingBalance,
                 periodNumber, mc, interestForThisInstallment);
 

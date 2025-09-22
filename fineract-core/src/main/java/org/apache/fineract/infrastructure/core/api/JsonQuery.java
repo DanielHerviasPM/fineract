@@ -43,6 +43,24 @@ public final class JsonQuery {
     private final JsonElement parsedQuery;
     private final FromJsonHelper fromApiJsonHelper;
 
+    ///
+    /** 
+     * Qué hace:
+     * <br>
+     * <ul>
+     * <li>Construye un objeto JsonQuery usando el método estático from()</li>
+     * <li>Recibe 3 parámetros:
+     *  <ul>
+     *     <li>apiRequestBodyAsJson: El JSON original como String</li>
+     *     <li>parsedQuery: El JSON ya parseado (línea 588)</li>
+     *     <li>this.fromJsonHelper: Utilidad para manejo de JSON</li>
+     *  </ul>
+     * </li>
+     * 
+     * </ul>
+     * Propósito: JsonQuery es un wrapper que encapsula tanto el JSON original como el parseado, proporcionando métodos convenientes <br>
+     * para validación y procesamiento en el framework de Fineract.
+     */
     public static JsonQuery from(final String jsonCommand, final JsonElement parsedQuery, final FromJsonHelper fromApiJsonHelper) {
         return new JsonQuery(jsonCommand, parsedQuery, fromApiJsonHelper);
     }
